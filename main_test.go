@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestGetCity(t *testing.T) {
 	t.Run("returns the city name when one argument is provided", func(t *testing.T) {
@@ -75,4 +80,46 @@ func TestGetCity(t *testing.T) {
 			t.Errorf("getCity() returned %q, expected empty string", city)
 		}
 	})
+}
+
+func TestGetWeather(t *testing.T) {
+	// 1. SETUP: Create a mock server.
+	// `httptest.NewServer` creates a real server on a random local port.
+	// It takes a handler function that we define right here. This function
+	// will be called whenever our test code makes a request to the server.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// This is our mock response. It's a simplified version of the real API response.
+		mockJSON := `{
+			"current_condition": [
+				{
+					"temp_C": "15",
+					"feelsLikeC": "12",
+					"weatherDesc": [{"value": "Sunny"}]
+				}
+			]
+		}`
+		// Write the mock JSON as the response.
+		fmt.Fprintln(w, mockJSON)
+	}))
+	// `defer server.Close()` ensures the server is shut down after the test finishes.
+	defer server.Close()
+
+	// 2. CALL: Execute the function we are testing.
+	// We pass the URL of our mock server to the function.
+	weather, err := getWeather(server.URL)
+
+	// 3. ASSERTIONS
+	if err != nil {
+		t.Fatalf("getWeather() returned an unexpected error: %v", err)
+	}
+
+	if len(weather.CurrentCondition) == 0 {
+		t.Fatalf("getWeather() returned no current condition")
+	}
+
+	expectedTemp := "15"
+	actualTemp := weather.CurrentCondition[0].TempC
+	if expectedTemp != actualTemp {
+		t.Errorf("Expected temperature %q, but got %q", expectedTemp, actualTemp)
+	}
 }
