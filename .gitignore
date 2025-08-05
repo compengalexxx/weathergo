@@ -1,0 +1,6 @@
+# GoLand IDE specific files
+.idea/
+
+# Go build outputs
+weathergo.exe
+weathergo
